@@ -35,21 +35,66 @@ list_numbered_files(DirName) ->
   FullFiles = [ filename:join(DirName, File) || File <- Files ],
   Indices = lists:seq(1, length(Files)),
   lists:zip(Indices, FullFiles). % {Index, FileName} tuples
-  
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
 %% Inverse Index
+%%
+%%  Starts process by:
+%%      1.  Getting the input files
+%%      2.  Calling "mapreduce" passing the input files and the Map & Reduce 
+%%          functions
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 index(DirName) ->
+  io:format("1. Start map/reduce process for files located in directory: ~p\n", 
+            [DirName]),
   NumberedFiles = list_numbered_files(DirName),
   mapreduce(NumberedFiles, fun find_words/3, fun remove_duplicates/3).
 
-% this function is used as a Map function
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+%%  The mapping function which reads the words contained in a file and puts them
+%%  into a list.
+%%
+%%  For each word in the Words list:
+%%      1.  Calls the Emit function passing the current Word and associated file
+%%          name
+%%          a.  Emit is the function that collects intermediate results
+%%          b.  _Index is a named, but unused value
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 find_words(_Index, FileName, Emit) ->
+  io:format("       Map worker for file: ~p\n", 
+            [FileName]),
   {ok, [Words]} = file:consult(FileName),
   lists:foreach(fun (Word) -> Emit(Word, FileName) end, Words).
 
-% this function is used as a Reduce function
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+%%  The reduce function which associates a given word with all the files that 
+%%  contain that word.
+%%
+%%  For each file in the Files list (after removing any duplicates):
+%%      1.  Calls the Emit function passing the current Word and associated file
+%%          name
+%%          a.  Emit is the function that collects intermediate results
+%%          b.  _Index is a named, but unused value
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 remove_duplicates(Word, FileNames, Emit) ->
+  io:format("       Reduce worker for Word <<~p>> and associated FileNames <<~p>>\n", 
+            [Word, FileNames]),
   UniqueFiles = sets:to_list(sets:from_list(FileNames)),
   lists:foreach(fun (FileName) -> Emit(Word, FileName) end, UniqueFiles).
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+%% Query the index after the map/reduce operation is complete.
+%%
+%%  Given an Index (i.e., a Map or Dictionary) and a Word, return the files
+%%  that contained that word.
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 query_index(Index, Word) ->
   dict:find(Word, Index).

@@ -5,10 +5,11 @@ ebin:
 	mkdir ebin
 
 %.beam: %.erl ebin
-	erlc -o ebin $<
+	erlc +debug_info -o ebin $<
 
 code: $(SOURCES) $(OBJECTS)
 	cp -R test ebin
+	cp *.erl ebin
 
 clean:
 	rm -rf ebin
