@@ -1,4 +1,4 @@
-SOURCES=mapreduce.erl mapreduce_sequential.erl demo_frequency.erl demo_grep.erl demo_inverted_index.erl
+SOURCES=src/mapreduce.erl src/mapreduce_sequential.erl src/demo_frequency.erl src/demo_grep.erl src/demo_inverted_index.erl
 OBJECTS=$(SOURCES:.erl=.beam)
 
 ebin:
@@ -9,7 +9,6 @@ ebin:
 
 code: $(SOURCES) $(OBJECTS)
 	cp -R test ebin
-	cp *.erl ebin
 
 clean:
 	rm -rf ebin
