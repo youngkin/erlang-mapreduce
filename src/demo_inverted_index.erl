@@ -25,8 +25,13 @@
 
 % Example of building an inverted index of a set of text documents
 
+%% NOTE: module definition
 -module(demo_inverted_index).
+
+%% NOTE: public functions
 -export([index/1, query_index/2, list_numbered_files/1]).
+
+%% NOTE: provide a local name for a function in another module
 -import(mapreduce, [mapreduce/3]).
 
 %% Auxiliary function to generate {Index, FileName} input

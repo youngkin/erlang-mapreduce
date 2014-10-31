@@ -26,8 +26,15 @@
 % A basic parallel (but not distributed) implementation of the Google
 % MapReduce pattern.
 
+%% NOTE: module definition
 -module(mapreduce).
+
+%% NOTE: public (exported) functions
 -export([mapreduce/3]).
+
+%% NOTE: import lists:foreach/2, can be referenced as a local function
+%% NOTE: foreach/2 is a function (foreach) that takes 2 arguments (arity)
+%% NOTE: function name and arity uniquely define a function
 -import(lists, [foreach/2]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -76,7 +83,16 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 mapreduce(Input, Map, Reduce) ->
   S = self(),
+%% NOTE: creates (spawns) a new process
+%% NOTE: The new process runs the anonymous function provided as an argument.
+%% NOTE: In this case the fun calls the local master/4 function
   Pid = spawn(fun() -> master(S, Map, Reduce, Input) end),
+
+%% NOTE: This is a receive loop.
+%% NOTE: It waits for the Pid from the spawned function above to send it a message
+%% NOTE: {Pid, Result} ensures that it will receive a message from the process who's
+%% NOTE: process ID == Pid. It will bind the second value received to the variable
+%% NOTE: "Result"
   receive
     {Pid, Result} -> 
         io:format("\n\n5. Sending results to client process\n",[]),
@@ -106,6 +122,8 @@ mapreduce(Input, Map, Reduce) ->
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 spawn_workers(MasterPid, Fun, Pairs) ->
+%% NOTE: For every value in "Pairs", spawn the anonymous function "fun" and 
+%% NOTE: "link" to it to be notified when it EXITs.
   foreach(fun({K,V}) ->
             spawn_link(fun() -> worker(MasterPid, Fun, {K,V}) end)
           end, Pairs).
@@ -131,8 +149,7 @@ spawn_workers(MasterPid, Fun, Pairs) ->
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 master(Parent, Map, Reduce, Input) ->
-  process_flag(trap_exit, true), %% Tells VM to notify this process when any 
-                                 %% spawned processes exit
+  process_flag(trap_exit, true), 
   MasterPid = self(),
   
   %% Create the mapper processes, one for each element in Input
@@ -153,6 +170,11 @@ master(Parent, Map, Reduce, Input) ->
   io:format("    a. Waiting for <<~p>> replies from the Reduce processes\n",[R]),
   Output = collect_replies(R, dict:new()),
   io:format("\n4. Sending results to Master process\n",[]),
+%% NOTE: Sends results to Parent (PID) by sending a message
+%% NOTE: This will be received by the "Parent"'s receive loop by
+%% NOTE: matching on the tuple {Pid, Output} where Pid must match
+%% NOTE: the value returned by the spawn call that created this 
+%% NOTE: (i.e., self()).
   Parent ! {self(), Output}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -198,6 +220,11 @@ worker(MasterPid, Fun, {K,V}) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% collect and merge {Key, Value} messages from N processes.
 %% When N processes have terminated return a dictionary of {Key, [Value]} pairs
+%% NOTE: Tail-recursive compound function definition (i.e., 2 function clauses).
+%% NOTE: The first function clause is the halting condition (i.e., stop when the
+%% NOTE: value of the first parameter equals 0).
+%% NOTE: The second function clause is the tail-recursive function that implements
+%% NOTE: the "receive" loop.
 collect_replies(0, Dict) -> Dict;
 collect_replies(N, Dict) ->
   receive
